@@ -239,7 +239,7 @@ struct btchip_context_s {
     unsigned char sigHashType[4];
 
     /*Is swap mode*/
-    // unsigned char called_from_swap;
+    unsigned char called_from_swap;
 };
 typedef struct btchip_context_s btchip_context_t;
 
@@ -285,7 +285,8 @@ typedef enum btchip_coin_kind_e {
     COIN_KIND_LBRY,
     COIN_KIND_RESISTANCE,
     COIN_KIND_RAVENCOIN,
-    COIN_KIND_HYDRA
+    COIN_KIND_HYDRA,
+    COIN_KIND_WAGERR
 } btchip_coin_kind_t;
 
 typedef struct btchip_altcoin_config_s {

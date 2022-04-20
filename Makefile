@@ -28,7 +28,7 @@ APP_PATH = ""
 
 APPVERSION_M = 2
 APPVERSION_N = 0
-APPVERSION_P = 4
+APPVERSION_P = 3
 APPVERSION   = "$(APPVERSION_M).$(APPVERSION_N).$(APPVERSION_P)"
 
 
@@ -42,6 +42,8 @@ endif
 # Custom NanoS linking script to overlap legacy globals and new globals
 ifeq ($(TARGET_NAME),TARGET_NANOS)
 SCRIPT_LD:=$(CURDIR)/script-nanos.ld
+else ifneq ($(TARGET_NAME),TARGET_NANOX)
+$(error Unknown target: $(TARGET_NAME))
 endif
 
 # Flags: BOLOS_SETTINGS, GLOBAL_PIN, DERIVE_MASTER
@@ -57,7 +59,7 @@ ifeq ($(COIN),bitcoin_testnet)
 DEFINES_LIB=
 APP_LOAD_FLAGS=--appFlags 0xa50
 
-# Bitcoin testnet (can also be used for signet)
+# Bitcoin testnet
 DEFINES   += BIP32_PUBKEY_VERSION=0x043587CF
 DEFINES   += BIP44_COIN_TYPE=1
 DEFINES   += BIP44_COIN_TYPE_2=1
@@ -95,6 +97,27 @@ DEFINES   += COIN_KIND=COIN_KIND_BITCOIN
 DEFINES   += COIN_FLAGS=FLAG_SEGWIT_CHANGE_SUPPORT
 
 APPNAME = "Bitcoin"
+else ifeq ($(COIN),wagerr)
+
+# we're not using the lib :)
+#DEFINES_LIB=
+#APP_LOAD_FLAGS=--appFlags 0xa50
+
+# Wagerr mainnet
+DEFINES   += BIP32_PUBKEY_VERSION=0x0221312b
+DEFINES   += BIP44_COIN_TYPE=7825266
+DEFINES   += BIP44_COIN_TYPE_2=7825266
+DEFINES   += COIN_P2PKH_VERSION=73
+DEFINES   += COIN_P2SH_VERSION=63
+DEFINES   += COIN_FAMILY=1
+DEFINES   += COIN_COINID=\"Wagerr\"
+DEFINES   += COIN_COINID_HEADER=\"WAGERR\"
+DEFINES   += COIN_COINID_NAME=\"Wagerr\"
+DEFINES   += COIN_COINID_SHORT=\"WGR\"
+DEFINES   += COIN_KIND=COIN_KIND_WAGERR
+
+APPNAME = "Wagerr"
+APP_LOAD_PARAMS += --path $(APP_PATH)
 
 else ifeq ($(COIN),bitcoin_testnet_lib)
 # Bitcoin testnet, but using the library mechanism
@@ -125,7 +148,7 @@ APP_LOAD_FLAGS=--appFlags 0xa50
 DEFINES   += DISABLE_LEGACY_SUPPORT
 
 # Bitcoin mainnet, no legacy support
-DEFINES   += BIP32_PUBKEY_VERSION=0x0488B21E
+DEFINES   += BIP32_PUBKEY_VERSION=0x00000000 #0x0488B21E
 DEFINES   += BIP44_COIN_TYPE=0
 DEFINES   += BIP44_COIN_TYPE_2=0
 DEFINES   += COIN_P2PKH_VERSION=0
@@ -153,28 +176,6 @@ DEFINES   += COIN_NATIVE_SEGWIT_PREFIX=\"tb\"
 DEFINES   += COIN_COINID_SHORT=\"TEST\"
 APPNAME = "Bitcoin Test (Lite)"
 
-else ifeq ($(COIN),bitcoin_regtest)
-# This target can be used to compile a version of the app that uses regtest addresses
-
-# we're not using the lib :)
-DEFINES_LIB=
-APP_LOAD_FLAGS=--appFlags 0xa50
-
-# Bitcoin regtest test network
-DEFINES   += BIP32_PUBKEY_VERSION=0x043587CF
-DEFINES   += BIP44_COIN_TYPE=1
-DEFINES   += BIP44_COIN_TYPE_2=1
-DEFINES   += COIN_P2PKH_VERSION=111
-DEFINES   += COIN_P2SH_VERSION=196
-DEFINES   += COIN_NATIVE_SEGWIT_PREFIX=\"bcrt\"
-DEFINES   += COIN_FAMILY=1
-DEFINES   += COIN_COINID=\"Bitcoin\"
-DEFINES   += COIN_COINID_HEADER=\"BITCOIN\"
-DEFINES   += COIN_COINID_NAME=\"Bitcoin\"
-DEFINES   += COIN_COINID_SHORT=\"TEST\"
-DEFINES   += COIN_KIND=COIN_KIND_BITCOIN_TESTNET
-DEFINES   += COIN_FLAGS=FLAG_SEGWIT_CHANGE_SUPPORT
-APPNAME = "Bitcoin Regtest"
 else ifeq ($(COIN),bitcoin_cash)
 # Bitcoin cash
 # Initial fork from Bitcoin, public key access is authorized. Signature is different thanks to the forkId
@@ -613,7 +614,7 @@ DEFINES   += COIN_COINID_SHORT=\"HYDRA\"
 DEFINES   += COIN_NATIVE_SEGWIT_PREFIX=\"hc\"
 DEFINES   += COIN_KIND=COIN_KIND_HYDRA
 DEFINES   += COIN_FLAGS=FLAG_SEGWIT_CHANGE_SUPPORT
-APPNAME ="Hydra Test"
+APPNAME ="Hydra"
 APP_LOAD_PARAMS += --path "44'/609'"
 else ifeq ($(COIN),hydra)
 # Hydra mainnet
@@ -634,17 +635,18 @@ APPNAME ="Hydra"
 APP_LOAD_PARAMS += --path "44'/609'"
 else
 ifeq ($(filter clean,$(MAKECMDGOALS)),)
-$(error Unsupported COIN - use bitcoin_testnet, bitcoin, bitcoin_cash, bitcoin_gold, litecoin, dogecoin, dash, zcash, horizen, komodo, stratis, peercoin, pivx, viacoin, vertcoin, stealth, digibyte, qtum, bitcoin_private, firo, gamecredits, zclassic, xsn, nix, lbry, resistance, ravencoin, hydra, hydra_testnet, xrhodium)
+$(error Unsupported COIN - use bitcoin_testnet, bitcoin, wagerr, bitcoin_cash, bitcoin_gold, litecoin, dogecoin, dash, zcash, horizen, komodo, stratis, peercoin, pivx, viacoin, vertcoin, stealth, digibyte, qtum, bitcoin_private, firo, gamecredits, zclassic, xsn, nix, lbry, resistance, ravencoin, hydra, hydra_testnet, xrhodium)
 endif
 endif
 
 APP_LOAD_PARAMS += $(APP_LOAD_FLAGS)
 DEFINES += $(DEFINES_LIB)
 
-ifeq ($(TARGET_NAME),TARGET_NANOS)
-ICONNAME=icons/nanos_app_$(COIN).gif
-else
+
+ifeq ($(TARGET_NAME),TARGET_NANOX)
 ICONNAME=icons/nanox_app_$(COIN).gif
+else
+ICONNAME=icons/nanos_app_$(COIN).gif
 endif
 
 all: default
@@ -668,22 +670,23 @@ DEFINES   += APPVERSION=\"$(APPVERSION)\"
 DEFINES   += HAVE_BOLOS_APP_STACK_CANARY
 
 
-ifeq ($(TARGET_NAME),TARGET_NANOS)
-DEFINES       += IO_SEPROXYHAL_BUFFER_SIZE_B=72
-DEFINES       += HAVE_WALLET_ID_SDK
-else
+ifeq ($(TARGET_NAME),TARGET_NANOX)
 DEFINES       += IO_SEPROXYHAL_BUFFER_SIZE_B=300
+
+DEFINES       += HAVE_BLE BLE_COMMAND_TIMEOUT_MS=2000
+DEFINES       += HAVE_BLE_APDU # basic ledger apdu transport over BLE
+
 DEFINES       += HAVE_BAGL BAGL_WIDTH=128 BAGL_HEIGHT=64
 DEFINES       += HAVE_BAGL_ELLIPSIS # long label truncation feature
 DEFINES       += HAVE_BAGL_FONT_OPEN_SANS_REGULAR_11PX
 DEFINES       += HAVE_BAGL_FONT_OPEN_SANS_EXTRABOLD_11PX
 DEFINES       += HAVE_BAGL_FONT_OPEN_SANS_LIGHT_16PX
+else
+DEFINES       += IO_SEPROXYHAL_BUFFER_SIZE_B=72
+
+DEFINES       += HAVE_WALLET_ID_SDK
 endif
 
-ifeq ($(TARGET_NAME),TARGET_NANOX)
-DEFINES       += HAVE_BLE BLE_COMMAND_TIMEOUT_MS=2000
-DEFINES       += HAVE_BLE_APDU # basic ledger apdu transport over BLE
-endif
 
 ifeq ($(TARGET_NAME),TARGET_NANOS)
     # enables optimizations using the shared 1K CXRAM region
@@ -706,10 +709,10 @@ else
                 $(warning Using semihosted PRINTF. Only run with speculos!)
                 DEFINES   += HAVE_PRINTF HAVE_SEMIHOSTED_PRINTF PRINTF=semihosted_printf
         else
-                ifeq ($(TARGET_NAME),TARGET_NANOS)
-                        DEFINES   += HAVE_PRINTF PRINTF=screen_printf
-                else
+                ifeq ($(TARGET_NAME),TARGET_NANOX)
                         DEFINES   += HAVE_PRINTF PRINTF=mcu_usb_printf
+                else
+                        DEFINES   += HAVE_PRINTF PRINTF=screen_printf
                 endif
         endif
 endif
@@ -764,12 +767,16 @@ dep/%.d: %.c Makefile
 
 
 # Temporary restriction until we a Resistance Nano X icon
-ifeq ($(TARGET_NAME),TARGET_NANOS)
+ifeq ($(TARGET_NAME),TARGET_NANOX)
+
 listvariants:
-	@echo VARIANTS COIN bitcoin_testnet bitcoin bitcoin_cash bitcoin_gold litecoin dogecoin dash zcash horizen komodo stratis peercoin pivx viacoin vertcoin stealth digibyte qtum bitcoin_private firo gamecredits zclassic xsn nix lbry ravencoin resistance hydra hydra_testnet xrhodium
+	@echo VARIANTS COIN bitcoin_testnet bitcoin wagerr bitcoin_cash bitcoin_gold litecoin dogecoin dash zcash horizen komodo stratis peercoin pivx viacoin vertcoin stealth digibyte qtum bitcoin_private firo gamecredits zclassic xsn nix lbry ravencoin hydra hydra_testnet xrhodium
+
 else
+
 listvariants:
-	@echo VARIANTS COIN bitcoin_testnet bitcoin bitcoin_cash bitcoin_gold litecoin dogecoin dash zcash horizen komodo stratis peercoin pivx viacoin vertcoin stealth digibyte qtum bitcoin_private firo gamecredits zclassic xsn nix lbry ravencoin hydra hydra_testnet xrhodium
+	@echo VARIANTS COIN bitcoin_testnet bitcoin wagerr bitcoin_cash bitcoin_gold litecoin dogecoin dash zcash horizen komodo stratis peercoin pivx viacoin vertcoin stealth digibyte qtum bitcoin_private firo gamecredits zclassic xsn nix lbry ravencoin resistance hydra hydra_testnet xrhodium
+
 endif
 
 
